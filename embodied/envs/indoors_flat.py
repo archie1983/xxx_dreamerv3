@@ -215,10 +215,10 @@ class TargetAchievedRewardForDoor:
             if extra_obs['distanceleft'] >= extra_obs['initial_distance']:
                 reward = (extra_obs['initial_distance'] - 2 * extra_obs['distanceleft'])
             else:
-                reward = 3 * (extra_obs['initial_distance'] - extra_obs['distanceleft'])
+                reward = extra_obs['initial_distance'] - extra_obs['distanceleft']
             # extra reward for achieving epsilon requirement
             if (extra_obs['distanceleft'] <= self.epsilon or extra_obs['stepsafterroomchange'] >= self.steps_in_new_room):
-                reward += 20
+                reward += 100
             self.reward_issued = True
             #print("final reward: ", reward, " = ", extra_obs['initial_distance'], " - ", extra_obs['distanceleft'])
         return np.float32(reward)
@@ -1090,7 +1090,8 @@ class DoorFinder(AI2ThorBase):
     def have_we_arrived(self, epsilon = 0.0, eval = False):
         # If we're free to choose any door as destination (i.e., we are evaluating),
         # then mark it as arrived if we're within distance of any door
-        if eval:
+        #if eval:
+        if True:
             if self.all_door_targets != None:
                 for dt in self.all_door_targets:
                     p1 = (dt['pos']['x'], dt['pos']['z'])
