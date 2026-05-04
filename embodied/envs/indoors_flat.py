@@ -439,6 +439,8 @@ class AI2ThorBase(embodied.Env):
             'is_first': elements.Space(bool),
             'is_last': elements.Space(bool),
             'is_terminal': elements.Space(bool),
+            'doorvis': elements.Space(bool),
+            'newroom': elements.Space(bool),
             #'distanceleft': elements.Space(np.float32),
             #'stepsafterroomchange': elements.Space(np.float32),
             #'roomtype': elements.Space(np.float32),
@@ -570,12 +572,16 @@ class AI2ThorBase(embodied.Env):
                 self.steps_in_new_room = 0
                 self.starting_room = self.current_room
 
+        all_visible_doors = self.nu.get_all_visible_doors(self.controller)
+
         obs = dict(
             reward = 0.0,
             pov = self._current_image,
             is_first = np.bool(self.isFirst),
             is_last = np.bool(self._done),
             is_terminal = np.bool(self._done),
+            doorvis = np.bool(len(all_visible_doors) > 0),
+            newroom = np.bool(self.steps_in_new_room > 0)
         )
 
         extra_obs = dict(
