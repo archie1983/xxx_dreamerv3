@@ -86,7 +86,7 @@ class Door(embodied.Wrapper):
         #    actions.pop("STOP")  # remove STOP action because that will be treated differently
 
         self.rewards = [
-            DistanceReductionReward(scale=1.0),
+            StepCountPenalizer(scale=1.0),
             TargetAchievedRewardForDoor(epsilon=reward_close_enough)
         ]
         length = kwargs.pop('length', 36000)
@@ -190,37 +190,70 @@ class DistanceReductionReward:
         return np.float32(reward)
 
 ##
+# Penalize each step with -1 after the initial nearest length of the steps for a door.
+# The fewer the steps, the better final reward.
+##
+class StepCountPenalizer:
+    def __init__(self, scale=1.0):
+        self.scale = scale
+        self.steps_done = 0
+
+    def __call__(self, obs, extra_obs, action):
+        reward = 0.0
+        if obs['is_first']:
+            self.steps_done = 0
+        else:
+            self.steps_done += 1
+
+        if self.steps_done > extra_obs['initial_distance']:
+            reward = -0.25
+
+        return np.float32(reward * self.scale)
+
+##
 # Issue a reward for achieving the target - once per scene
 ##
 class TargetAchievedRewardForDoor:
-    def __init__(self, epsilon = 0.0, steps_in_new_room = 3):
+    def __init__(self, epsilon = 0.0, min_steps_in_new_room = 3, max_steps_in_new_room = 10):
         '''
         :param epsilon: How close is close enough to issue the reward
         '''
         self.reward_issued = False
-        self.steps_in_new_room = steps_in_new_room
+        self.min_steps_in_new_room = min_steps_in_new_room
+        self.max_steps_in_new_room = max_steps_in_new_room
         self.epsilon = epsilon
+        self.steps_done = 0
 
     def __call__(self, obs, extra_obs, action):
         #print("T1")
-        reward = 0
+        reward = -1
         if obs['is_first']:
             self.reward_issued = False
+            self.steps_done = 0
         elif not self.reward_issued and index_to_action(int(action['action'])) == "STOP":
             '''
             We only want to issue this reward once the STOP action has been issued by the model. And at that point we will calculate
-            how much we award based on distance left
+            how much we award based on what has been achieved.
             '''
-            # double the penalty for distance left to discourage early STOP
-            if extra_obs['distanceleft'] >= extra_obs['initial_distance']:
-                reward = (extra_obs['initial_distance'] - 2 * extra_obs['distanceleft'])
-            else:
-                reward = extra_obs['initial_distance'] - extra_obs['distanceleft']
-            # extra reward for achieving epsilon requirement
-            if (extra_obs['distanceleft'] <= self.epsilon or extra_obs['stepsafterroomchange'] >= self.steps_in_new_room):
+            # high reward for achieving epsilon requirement for any door
+            for dist in extra_obs['all_target_dists']:
+                if dist <= self.epsilon:
+                    reward += 100
+                    break
+            # high reward for correct amount of steps in the new room
+            if (extra_obs['stepsafterroomchange'] <= self.max_steps_in_new_room and extra_obs['stepsafterroomchange'] >= self.min_steps_in_new_room):
                 reward += 100
+
+            # If none of the above rewards have been earned, then check if it needs a penalty for
+            # early STOP (not walking enough to get even through the nearest door)
+            if reward <= 0:
+                if self.steps_done < extra_obs['initial_distance']:
+                    reward = -100
+
             self.reward_issued = True
             #print("final reward: ", reward, " = ", extra_obs['initial_distance'], " - ", extra_obs['distanceleft'])
+        else:
+            self.steps_done += 1
         return np.float32(reward)
 
 ##
@@ -470,6 +503,7 @@ class AI2ThorBase(embodied.Env):
             try:
                 self.distance_left, self.room_type, self.cur_pos_xy = self.get_current_path_and_pose_state()
                 self.travelled_path.append(self.cur_pos_xy)
+                self.all_target_dists = self.euclidean_dist_to_all_targets()
             except ValueError as e:
                 self.distance_left = np.float32(0.0)
                 self._bad_spot = True
@@ -528,8 +562,13 @@ class AI2ThorBase(embodied.Env):
         self._current_image = event.cv2img
 
         #print("self.current_room == self.target_room", self.current_room, self.target_room)
-        # if we're in the target room, then count how many steps we've done in the target room
-        self.steps_in_new_room = self.steps_in_new_room + 1 if self.current_room == self.target_room else 0
+        # If we've changed a room, then count how many steps we're making in it.
+        # If we change a room again, start the count from 0
+        if self.starting_room is not None and self.current_room != self.starting_room:
+            self.steps_in_new_room += 1
+            if self.steps_in_new_room > 15:
+                self.steps_in_new_room = 0
+                self.starting_room = self.current_room
 
         obs = dict(
             reward = 0.0,
@@ -543,7 +582,8 @@ class AI2ThorBase(embodied.Env):
             distanceleft=np.float32(self.distance_left),
             stepsafterroomchange=np.float32(self.steps_in_new_room),
             roomtype=np.float32(self.room_type),
-            initial_distance=np.float32(self.initial_distance)
+            initial_distance=np.float32(self.initial_distance),
+            all_dists=self.all_target_dists
         )
 
         if self._done:
@@ -571,6 +611,7 @@ class AI2ThorBase(embodied.Env):
         self._bad_spot = False
 
         self.distance_left = 0
+        self.all_target_dists = []
         self.steps_in_new_room = 0
         self.room_type = -1
         self.starting_room = None
@@ -994,6 +1035,18 @@ class AI2ThorBase(embodied.Env):
         room_type = np.uint8(RoomType.interpret_label(room_type).value)
         #print("FR2")
         return room_type
+
+    ##
+    # Calculate all Euclidean distances to all door targets
+    ##
+    def euclidean_dist_to_all_targets(self):
+        dists = []
+        if self.all_door_targets != None:
+            for dt in self.all_door_targets:
+                p1 = (dt['pos']['x'], dt['pos']['z'])
+                p2 = (self.cur_pos_xy[0], self.cur_pos_xy[2])
+                dists.append(euclidean_dist(p1, p2))
+        return dists
 
 ##
 # Room centre finding task
