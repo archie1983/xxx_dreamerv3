@@ -589,7 +589,7 @@ class AI2ThorBase(embodied.Env):
             stepsafterroomchange=np.float32(self.steps_in_new_room),
             roomtype=np.float32(self.room_type),
             initial_distance=np.float32(self.initial_distance),
-            all_dists=self.all_target_dists
+            all_target_dists=self.all_target_dists
         )
 
         if self._done:
@@ -634,13 +634,16 @@ class AI2ThorBase(embodied.Env):
             'is_first': obs['is_first'],
             'is_last': obs['is_last'],
             'is_terminal': obs['is_terminal'],
+            'doorvis': obs['doorvis'],
+            'newroom': obs['newroom']
         }
 
         extra_obs = {
             'distanceleft': extra_obs['distanceleft'],
             'stepsafterroomchange': extra_obs['stepsafterroomchange'],
             'roomtype': extra_obs['roomtype'],
-            'initial_distance': extra_obs['initial_distance']
+            'initial_distance': extra_obs['initial_distance'],
+            'all_target_dists': extra_obs['all_target_dists']
         }
 
         #print("obs: ", obs)
