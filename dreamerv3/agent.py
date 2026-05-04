@@ -85,12 +85,16 @@ class Agent(embodied.jax.Agent):
         embodied.jax.MLPHead(scalar, **config.value, name='slowval'),
         source=self.val, **config.slowvalue)
 
+    # AE: Our new heads for door visibility and crossing into new room
+    self.doorvis = embodied.jax.MLPHead(binary, **config.doorvishead, name='doorvis')
+    self.newroom = embodied.jax.MLPHead(binary, **config.newroomhead, name='newroom')
+
     self.retnorm = embodied.jax.Normalize(**config.retnorm, name='retnorm')
     self.valnorm = embodied.jax.Normalize(**config.valnorm, name='valnorm')
     self.advnorm = embodied.jax.Normalize(**config.advnorm, name='advnorm')
 
     self.modules = [
-        self.dyn, self.enc, self.dec, self.rew, self.con, self.pol, self.val]
+        self.dyn, self.enc, self.dec, self.rew, self.con, self.pol, self.val, self.doorvis, self.newroom]
     self.opt = embodied.jax.Optimizer(
         self.modules, self._make_opt(**config.opt), summary_depth=1,
         name='opt')
@@ -102,7 +106,7 @@ class Agent(embodied.jax.Agent):
 
   @property
   def policy_keys(self):
-    return '^(enc|dyn|dec|pol|con)/'
+    return '^(enc|dyn|dec|pol|con|doorvis|newroom)/'
 
   @property
   def ext_space(self):
@@ -174,6 +178,16 @@ class Agent(embodied.jax.Agent):
     continuity = self.con(self.feat2tensor(feat), bdims=1)
     cont = continuity.prob(1)
     out['cont'] = cont
+
+    # AE: Adding two predictions: whether a door is visible and whether we have entered a new room
+    doorvisible = self.doorvis(self.feat2tensor(feat), bdims=1)
+    door_is_visible = doorvisible.prob(1)
+    out['doorvis'] = door_is_visible
+
+    new_room = self.newroom(self.feat2tensor(feat), bdims=1)
+    new_room_started = new_room.prob(1)
+    out['newroom'] = new_room_started
+
     #print("AE: continuity: ", continuity)
     #print("AE: continuity.prob(1): ", continuity.prob(1))
     # AE: continuity prob added.
@@ -239,6 +253,11 @@ class Agent(embodied.jax.Agent):
     #self.test_inp = self.feat2tensor(repfeat)
     #breakpoint()
     losses['con'] = self.con(self.feat2tensor(repfeat), 2).loss(con)
+
+    # AE: Now let's add loss calculation for our newroom and doorvis heads
+    losses['doorvis'] = self.doorvis(self.feat2tensor(repfeat), 2).loss(obs['doorvis'])
+    losses['newroom'] = self.newroom(self.feat2tensor(repfeat), 2).loss(obs['newroom'])
+
     for key, recon in recons.items():
       space, value = self.obs_space[key], obs[key]
       assert value.dtype == space.dtype, (key, space, value.dtype)
@@ -270,6 +289,8 @@ class Agent(embodied.jax.Agent):
         imgact,
         self.rew(inp, 2).pred(),
         self.con(inp, 2).prob(1),
+        self.doorvis(inp, 2).prob(1),
+        self.newroom(inp, 2).prob(1),
         self.pol(inp, 2),
         self.val(inp, 2),
         self.slowval(inp, 2),
@@ -446,7 +467,7 @@ class Agent(embodied.jax.Agent):
 
 
 def imag_loss(
-    act, rew, con,
+    act, rew, con, doorvis, newroom,
     policy, value, slowvalue,
     retnorm, valnorm, advnorm,
     update,
@@ -493,6 +514,11 @@ def imag_loss(
   metrics['adv_mag'] = jnp.abs(adv).mean()
   metrics['rew'] = rew.mean()
   metrics['con'] = con.mean()
+
+  # AE: adding doorvis and newroom predictions to the imagination loss
+  metrics['doorvis'] = doorvis.mean()
+  metrics['newroom'] = newroom.mean()
+
   metrics['ret'] = ret_normed.mean()
   metrics['val'] = val.mean()
   metrics['tar'] = tar_normed.mean()
