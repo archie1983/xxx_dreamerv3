@@ -252,7 +252,7 @@ class TargetAchievedRewardForDoor:
 
             # Participation prize if any of the distances have become smaller
             # Participation prize equals to the best reduction of the distances
-            if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists']) == len(extra_obs['all_target_dists_initial']):
+            if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists']) == len(extra_obs['all_target_dists_initial']) and len(extra_obs['all_target_dists']) > 0:
                 reward += max([d1 - d2 for d1, d2 in zip(extra_obs['all_target_dists_initial'], extra_obs['all_target_dists'])])
 
             self.reward_issued = True
