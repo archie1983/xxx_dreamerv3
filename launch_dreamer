@@ -53,3 +53,6 @@ python dreamerv3/main.py --configs indoorsae_eval --run.envs 3 --batch_size 3 --
 
 # Running Door finder training:
 python dreamerv3/main.py --configs indoorsdoor --batch_size 3 --run.envs 3 --logdir "/user/work/hp20024/door_find_free"
+
+# 25m model:
+python dreamerv3/main.py --configs indoorsdoor size25m --batch_size 3 --run.envs 3
