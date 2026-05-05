@@ -226,7 +226,7 @@ class TargetAchievedRewardForDoor:
 
     def __call__(self, obs, extra_obs, action):
         #print("T1")
-        reward = -1
+        reward = 0
         if obs['is_first']:
             self.reward_issued = False
             self.steps_done = 0
