@@ -257,7 +257,7 @@ class Agent(embodied.jax.Agent):
     # AE: Now let's add loss calculation for our newroom and doorvis heads
     #losses['doorvis'] = self.doorvis(self.feat2tensor(repfeat), 2).loss(f32(obs['doorvis']))
     #losses['newroom'] = self.newroom(self.feat2tensor(repfeat), 2).loss(f32(obs['newroom']))
-    losses['doorvis'] = self.doorvis(inp, 2).loss(obs['doorvis'])
+    losses['doorvis'] = self.doorvis(self.feat2tensor(repfeat), 2).loss(obs['doorvis'])
     #losses['newroom'] = self.newroom(inp, 2).loss(obs['newroom'])
 
     # Add small weight to these losses initially (0.1 or 0.01)
@@ -266,6 +266,10 @@ class Agent(embodied.jax.Agent):
 
     #losses['doorvis'] = doorvis_weight * self.doorvis(self.feat2tensor(repfeat), 2).loss(obs['doorvis'])
     #losses['newroom'] = newroom_weight * self.newroom(self.feat2tensor(repfeat), 2).loss(obs['newroom'])
+
+    #doorvis_target = obs['doorvis'].astype(jnp.float32)
+    #doorvis_pred = self.doorvis(self.feat2tensor(repfeat), 2).pred()
+
 
 #    print("Doorvis loss: ", losses['doorvis'].mean())
 #    print("Newroom loss: ", losses['newroom'].mean())
@@ -314,6 +318,19 @@ class Agent(embodied.jax.Agent):
         **self.config.imag_loss)
     losses.update({k: v.mean(1).reshape((B, K)) for k, v in los.items()})
     metrics.update(mets)
+
+    # AE: debug metrics
+    #metrics['doorvis/pred_mean'] = doorvis_pred.mean()
+    #metrics['doorvis/pred_std'] = doorvis_pred.std()
+    #metrics['doorvis/target_mean'] = doorvis_target.mean()
+    #metrics['doorvis/target_std'] = doorvis_target.std()
+
+    # Calculate accuracy
+    #doorvis_acc = ((doorvis_pred > 0.5) == (doorvis_target > 0.5)).mean()
+    #metrics['doorvis/accuracy'] = doorvis_acc
+
+    #metrics['doorvis/loss'] = losses['doorvis'].mean()
+    # AE: debug ends
 
     # Replay
     if self.config.repval_loss:
