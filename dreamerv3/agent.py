@@ -255,8 +255,10 @@ class Agent(embodied.jax.Agent):
     losses['con'] = self.con(self.feat2tensor(repfeat), 2).loss(con)
 
     # AE: Now let's add loss calculation for our newroom and doorvis heads
-    losses['doorvis'] = self.doorvis(self.feat2tensor(repfeat), 2).loss(f32(obs['doorvis']))
-    losses['newroom'] = self.newroom(self.feat2tensor(repfeat), 2).loss(f32(obs['newroom']))
+    #losses['doorvis'] = self.doorvis(self.feat2tensor(repfeat), 2).loss(f32(obs['doorvis']))
+    #losses['newroom'] = self.newroom(self.feat2tensor(repfeat), 2).loss(f32(obs['newroom']))
+    losses['doorvis'] = self.doorvis(inp, 2).loss(f32(obs['doorvis']))
+    losses['newroom'] = self.newroom(inp, 2).loss(f32(obs['newroom']))
 
     for key, recon in recons.items():
       space, value = self.obs_space[key], obs[key]
@@ -490,6 +492,8 @@ def imag_loss(
   last = jnp.zeros_like(con)
   term = 1 - con
   ret = lambda_return(last, term, rew, tarval, tarval, disc, lam)
+
+  # AE: Note that we are not (yet) using doorvis or newroom in imagination loss calculations.
 
   roffset, rscale = retnorm(ret, update)
   adv = (ret - tarval[:, :-1]) / rscale
