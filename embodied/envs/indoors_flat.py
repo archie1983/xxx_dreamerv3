@@ -440,7 +440,7 @@ class AI2ThorBase(embodied.Env):
             'is_last': elements.Space(bool),
             'is_terminal': elements.Space(bool),
             'doorvis': elements.Space(np.float32),
-            'newroom': elements.Space(np.float32),
+            #'newroom': elements.Space(np.float32),
             #'distanceleft': elements.Space(np.float32),
             #'stepsafterroomchange': elements.Space(np.float32),
             #'roomtype': elements.Space(np.float32),
@@ -581,7 +581,7 @@ class AI2ThorBase(embodied.Env):
             is_last = np.bool(self._done),
             is_terminal = np.bool(self._done),
             doorvis = np.float32(len(all_visible_doors) > 0),
-            newroom = np.float32(self.steps_in_new_room > 0)
+            #newroom = np.float32(self.steps_in_new_room > 0)
         )
 
         extra_obs = dict(
@@ -635,7 +635,7 @@ class AI2ThorBase(embodied.Env):
             'is_last': obs['is_last'],
             'is_terminal': obs['is_terminal'],
             'doorvis': obs['doorvis'],
-            'newroom': obs['newroom']
+            #'newroom': obs['newroom']
         }
 
         extra_obs = {
