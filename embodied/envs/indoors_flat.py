@@ -248,7 +248,12 @@ class TargetAchievedRewardForDoor:
             # early STOP (not walking enough to get even through the nearest door)
             if reward <= 0:
                 if self.steps_done < extra_obs['initial_distance']:
-                    reward = -100
+                    reward = -10
+
+            # Participation prize if any of the distances have become smaller
+            # Participation prize equals to the best reduction of the distances
+            if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists']) == len(extra_obs['all_target_dists_initial']):
+                reward += max([d1 - d2 for d1, d2 in zip(extra_obs['all_target_dists_initial'], extra_obs['all_target_dists'])])
 
             self.reward_issued = True
             #print("final reward: ", reward, " = ", extra_obs['initial_distance'], " - ", extra_obs['distanceleft'])
@@ -361,6 +366,7 @@ class AI2ThorBase(embodied.Env):
         self.step_count_since_start = 0
         self.distance_left = np.float32(0.0)
         self.cur_pos_xy = None
+        self.all_target_dists_initial = None
         self.room_type = -1 # current room type
         self.starting_room = None # which room we end up in when we spawn
         self.target_room = None # which room we want to end up in
@@ -523,6 +529,8 @@ class AI2ThorBase(embodied.Env):
             try:
                 self.distance_left, self.room_type, self.cur_pos_xy = self.get_current_path_and_pose_state()
                 self.travelled_path.append(self.cur_pos_xy)
+                if self.all_target_dists_initial is None:
+                    self.all_target_dists_initial = self.euclidean_dist_to_all_targets()
                 #self._done = self.have_we_arrived(self.reward_close_enough)
             except ValueError as e:
                 self.distance_left = np.float32(0.0)
@@ -589,7 +597,8 @@ class AI2ThorBase(embodied.Env):
             stepsafterroomchange=np.float32(self.steps_in_new_room),
             roomtype=np.float32(self.room_type),
             initial_distance=np.float32(self.initial_distance),
-            all_target_dists=self.all_target_dists
+            all_target_dists=self.all_target_dists,
+            all_target_dists_initial=self.all_target_dists_initial
         )
 
         if self._done:
@@ -621,6 +630,7 @@ class AI2ThorBase(embodied.Env):
         self.steps_in_new_room = 0
         self.room_type = -1
         self.starting_room = None
+        self.all_target_dists_initial = None
 
         obs, extra_obs = self.current_ai2thor_observation()
         #print("R2")
@@ -643,7 +653,8 @@ class AI2ThorBase(embodied.Env):
             'stepsafterroomchange': extra_obs['stepsafterroomchange'],
             'roomtype': extra_obs['roomtype'],
             'initial_distance': extra_obs['initial_distance'],
-            'all_target_dists': extra_obs['all_target_dists']
+            'all_target_dists': extra_obs['all_target_dists'],
+            'all_target_dists_initial': extra_obs['all_target_dists_initial'],
         }
 
         #print("obs: ", obs)
