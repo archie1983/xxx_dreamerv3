@@ -248,7 +248,7 @@ class TargetAchievedRewardForDoor:
             # early STOP (not walking enough to get even through the nearest door)
             if reward <= 0:
                 if self.steps_done < extra_obs['initial_distance']:
-                    reward = -100
+                    reward = -10
 
             # Participation prize if any of the distances have become smaller
             # Participation prize equals to the best reduction of the distances
