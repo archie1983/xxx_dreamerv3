@@ -255,11 +255,15 @@ class TargetAchievedRewardForDoor:
             # early STOP (not walking enough to get even through the nearest door)
             if reward <= 0:
                 if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0:
-                    min_distance_walk = np.mean(extra_obs['all_target_dists_initial'])
+                    min_distance_walk = np.min(extra_obs['all_target_dists_initial'])
+                    mean_distance_walk = np.mean(extra_obs['all_target_dists_initial'])
                 else:
                     min_distance_walk = extra_obs['initial_distance']
-                if self.steps_done < min_distance_walk:
-                    reward = -10 * (min_distance_walk - self.steps_done)
+                    mean_distance_walk = min_distance_walk
+                if self.steps_done < mean_distance_walk:
+                    reward = -1 * (min_distance_walk - self.steps_done)
+
+                reward = max(reward, -100)
 
             self.reward_issued = True
             #print("final reward: ", reward, " = ", extra_obs['initial_distance'], " - ", extra_obs['distanceleft'])
