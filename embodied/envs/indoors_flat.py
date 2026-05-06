@@ -244,16 +244,16 @@ class TargetAchievedRewardForDoor:
             if (extra_obs['stepsafterroomchange'] <= self.max_steps_in_new_room and extra_obs['stepsafterroomchange'] >= self.min_steps_in_new_room):
                 reward += 100
 
+            # Participation prize if any of the distances have become smaller
+            # Participation prize equals to the best reduction of the distances
+            if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists']) == len(extra_obs['all_target_dists_initial']) and len(extra_obs['all_target_dists']) > 0:
+                reward += max([d1 - d2 for d1, d2 in zip(extra_obs['all_target_dists_initial'], extra_obs['all_target_dists'])])
+
             # If none of the above rewards have been earned, then check if it needs a penalty for
             # early STOP (not walking enough to get even through the nearest door)
             if reward <= 0:
                 if self.steps_done < extra_obs['initial_distance']:
                     reward = -10
-
-            # Participation prize if any of the distances have become smaller
-            # Participation prize equals to the best reduction of the distances
-            if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists']) == len(extra_obs['all_target_dists_initial']) and len(extra_obs['all_target_dists']) > 0:
-                reward += max([d1 - d2 for d1, d2 in zip(extra_obs['all_target_dists_initial'], extra_obs['all_target_dists'])])
 
             self.reward_issued = True
             #print("final reward: ", reward, " = ", extra_obs['initial_distance'], " - ", extra_obs['distanceleft'])
