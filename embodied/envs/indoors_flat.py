@@ -205,8 +205,10 @@ class StepCountPenalizer:
         else:
             self.steps_done += 1
 
-        if self.steps_done > extra_obs['initial_distance']:
-            reward = -0.25
+        if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0 and self.steps_done > np.mean(extra_obs['all_target_dists_initial']):
+            reward = -0.1
+        #if self.steps_done > extra_obs['initial_distance']:
+        #    reward = -0.1
 
         return np.float32(reward * self.scale)
 
