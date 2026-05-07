@@ -439,8 +439,8 @@ class AI2ThorBase(embodied.Env):
         self.isFirst = False
 
         # Here we create the first AI2Thor environment (controller)
-        with self.LOCK:
-            self.load_next_start_point()
+        #with self.LOCK:
+        self.load_next_start_point()
 
         self._step = 0
         self._obs_space = self.obs_space
@@ -491,8 +491,8 @@ class AI2ThorBase(embodied.Env):
         #print("action: ", action)
 
         if action['reset']:
-            tr1 = time.time()
-            print('R', end='', sep='')
+            #tr1 = time.time()
+            print('R', (not self.choose_habitats_randomly_or_sequentially), end='', sep='')
             # STORE EPISODE STATS:
             # A* path length, A* path, travelled path length, travelled path, habitat id, actions taken.
             #if self.hab_set == "train":
@@ -521,9 +521,10 @@ class AI2ThorBase(embodied.Env):
                 with open(self.logdir + "/episode_data.jsonl", "a") as f:
                     f.write(json.dumps(episode_stats) + "\n")
 
+            #tr2 = time.time()
             obs, extra_obs = self._reset()
-            tr2 = time.time()
-            print("AE Tr = ", round(tr2-tr1,4))
+            #tr3 = time.time()
+            #print("AE Tr = ", round(tr2-tr1,4), " Trr = ", round(tr3-tr2, 4))
         elif index_to_action(int(action['action'])) == "STOP":
             t1s = time.time()
             self.chosen_actions.append(int(action['action']))
@@ -640,6 +641,7 @@ class AI2ThorBase(embodied.Env):
         return obs, extra_obs
 
     def _reset(self):
+        #t1r = time.time()
         #print("R1")
         self.astar_path = []
         self.path_start = None
@@ -647,9 +649,10 @@ class AI2ThorBase(embodied.Env):
         self.travelled_path = []
         self.chosen_actions = []
         # Load new point or even a habitat, set reward to 0 and is_first = True and is_last = False and self._done = False
-        with self.LOCK:
-            self.load_next_start_point()
+        #with self.LOCK:
+        self.load_next_start_point()
             #obs = self._env.step({'reset': True})
+        #t2r = time.time()
 
         self.step_count_in_current_episode = 0
         self._step = 0
@@ -664,6 +667,8 @@ class AI2ThorBase(embodied.Env):
         self.all_target_dists_initial = None
 
         obs, extra_obs = self.current_ai2thor_observation()
+        #t3r = time.time()
+        #print("AE: Trt = ", round(t3r - t1r, 4), " Tl = ", round(t2r - t1r, 4), " Tca = ", round(t3r - t2r, 4))
         #print("R2")
         return obs, extra_obs
 
@@ -754,22 +759,31 @@ class AI2ThorBase(embodied.Env):
     # this function.
     ##
     def load_next_start_point(self):
+        #t1 = time.time()
         #print("L1")
         # if nothing has been loaded, then we just load a brand new habitat - Simple
         if self.habitat_id is None:
             self.load_random_habitat()
+            #t2_1 = time.time()
+            #print("AE: Tl1 = ", round(t1 - t2_1, 4))
         else:
             # otherwise, we want to look at what have we explored and what is available
             # if we have already explored 20 random locations in this habitat, then it's time to move on
             if len(self.explored_placements_in_current_habitat) > self.places_per_hab:
                 self.load_random_habitat()
+                #t2_2 = time.time()
+                #print("AE: Tl2 = ", round(t1 - t2_2, 4))
             else:
                 # otherwise try to load the next random placement (it will attempt a few times, currently 10).
                 # If that fails, then we load new habitat.
                 try:
                     self.choose_random_placement_in_habitat()
+                    #t2_3 = time.time()
+                    #print("AE: Tl3 = ", round(t1 - t2_3, 4))
                 except ValueError as e:
                     self.load_random_habitat()
+                    #t2_4 = time.time()
+                    #print("AE: Tl4 = ", round(t1 - t2_4, 4))
 
         self.isFirst = True # we just loaded a new scene or habitat. The next observation will be first
         #print("L2")
@@ -859,6 +873,7 @@ class AI2ThorBase(embodied.Env):
     # to some goal.
     ##
     def choose_random_placement_in_habitat(self):
+        t1 = time.time()
         #print("CH1")
         ## All we need is a set of random positions and we get them like this:
         # params for the random teleportation part
@@ -882,12 +897,15 @@ class AI2ThorBase(embodied.Env):
         else: # if, on the other hand, we are evaluating or testing (loading habitats sequentially), then test everything the same way- use a seed
             rnd = self.create_rnd_object()
 
+        t2 = time.time()
         initial_agent_pose = tt.thor_agent_pose(self.controller)
         initial_horizon = tt.thor_camera_horizon(self.controller.last_event)
+        t3 = time.time()
 
         # reachable_positions = tt.thor_reachable_positions(self.controller)
         # self.reachable_positions
         placements = sep_spatial_sample(self.reachable_positions, sep, num_stops, rnd=rnd)
+        t4 = time.time()
 
         # print(placements)
 
@@ -986,6 +1004,8 @@ class AI2ThorBase(embodied.Env):
 
             #print("CH2")
             path_planned = True
+        t5 = time.time()
+        print("AE, Tb1 = ", round(t2 - t1, 4), " Tb2 = ", round(t3-t2,4), " Tb3 = ", round(t4-t3,4), " Tb4 = ", round(t5-t4, 4), " placement_attempts: ", placement_attempts)
 
     # Get all reachable positions and store them in a variable.
     def update_navigation_artifacts(self, house):
