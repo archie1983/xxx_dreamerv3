@@ -873,7 +873,7 @@ class AI2ThorBase(embodied.Env):
     # to some goal.
     ##
     def choose_random_placement_in_habitat(self):
-        t1 = time.time()
+        #t1 = time.time()
         #print("CH1")
         ## All we need is a set of random positions and we get them like this:
         # params for the random teleportation part
@@ -897,10 +897,10 @@ class AI2ThorBase(embodied.Env):
         else: # if, on the other hand, we are evaluating or testing (loading habitats sequentially), then test everything the same way- use a seed
             rnd = self.create_rnd_object()
 
-        t2 = time.time()
-        initial_agent_pose = tt.thor_agent_pose(self.controller)
-        initial_horizon = tt.thor_camera_horizon(self.controller.last_event)
-        t3 = time.time()
+        #t2 = time.time()
+        #initial_agent_pose = tt.thor_agent_pose(self.controller)
+        #initial_horizon = tt.thor_camera_horizon(self.controller.last_event)
+        #t3 = time.time()
 
         # reachable_positions = tt.thor_reachable_positions(self.controller)
         # self.reachable_positions
@@ -927,26 +927,32 @@ class AI2ThorBase(embodied.Env):
             #print("Placement: ", place_with_rtn, " el_ndx: ", el_ndx)
             self.explored_placements_in_current_habitat.append(place_with_rtn)
             ## Teleport, then start new exploration. Achieve goal. Then repeat.
+            tt1 = time.time()
             self.rnc.teleport_to(place_with_rtn)
+            tt2 = time.time()
 
             # We've just been put in a random place in a habitat. We want to move now to where we want to go,
             # e.g., middle of the room, a door, etc.. For that we need to plan a path to there.
             try:
                 point_for_room_search = (p[0], "", p[1])
+                tp1 = time.time()
                 self.current_target_point = self.choose_target_point(place_with_rtn, point_for_room_search) # self.target_room will be set in this function
+                tp2 = time.time()
 
                 cur_pos = self.rnc.get_agent_pos_and_rotation()
+                tp3 = time.time()
                 #print("Placement: ", place_with_rtn, " cur_pos: ", cur_pos, " el_ndx: ", el_ndx)
                 self.initial_path_length = self.nu.get_path_cost_to_target_point(cur_pos,
                                                                                  self.current_target_point,
                                                                                  self.reachable_positions,
                                                                                  close_enough=self.plan_close_enough,
                                                                                  step=self.grid_size)
-
+                tp4 = time.time()
                 # Now let's remember the A* path- we will want it for results.
                 (self.astar_path, _, self.path_start, self.path_dest) = self.nu.get_last_path_and_params()
                 #print("AE: Path: ", self.astar_path)
 
+                tp5 = time.time()
                 # If we have several permissible destinations, then calculate A* path for all of them
                 if hasattr(self, 'all_door_targets'):
                     self.all_astar_paths = []
@@ -959,7 +965,7 @@ class AI2ThorBase(embodied.Env):
                                                                              step=self.grid_size)
                         (astar_path, _, _, _) = self.nu.get_last_path_and_params()
                         self.all_astar_paths.append(astar_path)
-
+                tp6 = time.time()
                 if isinstance(self, DoorFinder):
                     # what is the room we start in
                     self.starting_room = room_this_point_belongs_to(self.rooms_in_habitat, point_for_room_search)
@@ -968,6 +974,8 @@ class AI2ThorBase(embodied.Env):
 
                     # We must ensure that we navigate from one room to another
                     if self.target_room == self.starting_room: raise ValueError("start and end points in same room")
+                tp7 = time.time()
+                print("AE Ttel = ", round(tt2 - tt1,4), " Tpl1 = ", round(tp2-tp1,4), " Tpl2=", round(tp3-tp2,4), " Tpl3=", round(tp4-tp3,4), " Tpl4=", round(tp5-tp4,4), " Tpl5=", round(tp6-tp5,4), " Tpl6=", round(tp7-tp6,4))
             except ValueError as e:
                 # If the path could not be planned, then drop it and carry on with the next one
                 #print(f"ERROR: {e}")
@@ -1005,7 +1013,8 @@ class AI2ThorBase(embodied.Env):
             #print("CH2")
             path_planned = True
         t5 = time.time()
-        print("AE, Tb1 = ", round(t2 - t1, 4), " Tb2 = ", round(t3-t2,4), " Tb3 = ", round(t4-t3,4), " Tb4 = ", round(t5-t4, 4), " placement_attempts: ", placement_attempts)
+        #print("AE, Tb1 = ", round(t2 - t1, 4), " Tb2 = ", round(t3-t2,4), " Tb3 = ", round(t4-t3,4), " Tb4 = ", round(t5-t4, 4), " placement_attempts: ", placement_attempts)
+        print("AE, Tb4 = ", round(t5 - t4, 4), " placement_attempts: ", placement_attempts)
 
     # Get all reachable positions and store them in a variable.
     def update_navigation_artifacts(self, house):
