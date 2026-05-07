@@ -416,6 +416,8 @@ class AI2ThorBase(embodied.Env):
             print(f"AE ?Validation? on : {type(self).__name__}")
             self.choose_habitats_randomly_or_sequentially = False
 
+        self.evaluation_mode = (not self.choose_habitats_randomly_or_sequentially)
+
         # when we select a random position and plan path to the room centre, we will assign a value to this parameter
         # with the A* path length from that random position to the desired point. This will help calculate reward from all
         # further points.
@@ -955,7 +957,7 @@ class AI2ThorBase(embodied.Env):
 
                 tp5 = time.time()
                 # If we have several permissible destinations, then calculate A* path for all of them
-                if hasattr(self, 'all_door_targets'):
+                if hasattr(self, 'all_door_targets') and self.evaluation_mode:
                     self.all_astar_paths = []
                     for dt in self.all_door_targets:
                         target_point = Point(dt["pos"]["x"], dt["pos"]["z"])
