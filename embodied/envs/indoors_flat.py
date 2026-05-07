@@ -494,7 +494,7 @@ class AI2ThorBase(embodied.Env):
 
         if action['reset']:
             #tr1 = time.time()
-            print('R', (not self.choose_habitats_randomly_or_sequentially), end='', sep='')
+            print('R', end='', sep='')
             # STORE EPISODE STATS:
             # A* path length, A* path, travelled path length, travelled path, habitat id, actions taken.
             #if self.hab_set == "train":
