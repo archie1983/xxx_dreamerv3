@@ -496,28 +496,30 @@ class AI2ThorBase(embodied.Env):
             # STORE EPISODE STATS:
             # A* path length, A* path, travelled path length, travelled path, habitat id, actions taken.
             #if self.hab_set == "train":
-            episode_stats = {
-                "local_step": self.step_count_since_start,
-                "steps_used": self.step_count_in_current_episode,
-                "habitat_id": str(self.habitat_id),
-                "bad_spot": self._bad_spot,
-                "have_arrived": str(self.have_we_arrived(epsilon=self.reward_close_enough, eval=(not self.choose_habitats_randomly_or_sequentially))),
-                "path_start": self.path_start,
-                "path_dest": self.path_dest,
-                "astar_path": self.astar_path,
-                "travelled_path": self.travelled_path,
-                "chosen_actions": self.chosen_actions,
-            }
-            # specially for door finder- if we're running it, we want all door targets
-            if hasattr(self, 'all_door_targets'):
-                episode_stats['all_door_targets'] = self.all_door_targets
+            # If evaluating, then store episode stats
+            if not self.choose_habitats_randomly_or_sequentially:
+                episode_stats = {
+                    "local_step": self.step_count_since_start,
+                    "steps_used": self.step_count_in_current_episode,
+                    "habitat_id": str(self.habitat_id),
+                    "bad_spot": self._bad_spot,
+                    "have_arrived": str(self.have_we_arrived(epsilon=self.reward_close_enough, eval=True)),
+                    "path_start": self.path_start,
+                    "path_dest": self.path_dest,
+                    "astar_path": self.astar_path,
+                    "travelled_path": self.travelled_path,
+                    "chosen_actions": self.chosen_actions,
+                }
+                # specially for door finder- if we're running it, we want all door targets
+                if hasattr(self, 'all_door_targets'):
+                    episode_stats['all_door_targets'] = self.all_door_targets
 
-            if hasattr(self, 'all_astar_paths'):
-                episode_stats['all_astar_paths'] = self.all_astar_paths
-            #print(episode_stats)
+                if hasattr(self, 'all_astar_paths'):
+                    episode_stats['all_astar_paths'] = self.all_astar_paths
+                #print(episode_stats)
 
-            with open(self.logdir + "/episode_data.jsonl", "a") as f:
-                f.write(json.dumps(episode_stats) + "\n")
+                with open(self.logdir + "/episode_data.jsonl", "a") as f:
+                    f.write(json.dumps(episode_stats) + "\n")
 
             obs, extra_obs = self._reset()
             tr2 = time.time()
