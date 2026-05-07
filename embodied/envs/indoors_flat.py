@@ -1,4 +1,4 @@
-import logging, threading, elements, random, embodied, traceback
+import logging, threading, elements, random, embodied, traceback, time
 import numpy as np
 from ai2_thor_model_training.training_data_extraction import RobotNavigationControl
 from ai2_thor_model_training.ae_utils import (NavigationUtils, action_mapping, euclidean_dist,
@@ -99,7 +99,9 @@ class Door(embodied.Wrapper):
 
     def step(self, action):
         #print("A1")
+        #t1 = time.time()
         obs, extra_obs = self.env.step(action, add_extra=True)
+        #t2 = time.time()
 
         # We will use choose_habitats_randomly_or_sequentially flag for determining whether we are in training mode (True)
         # and need to calculate reward, or we're in testing mode (False) and reward should be set to 0.
@@ -121,6 +123,8 @@ class Door(embodied.Wrapper):
         # we may not want to train on distance_left parameter, but if we pop it, then wrappers complain,
         # so perhaps it can stay for now.
         #obs.pop("distance_left")
+        #t3 = time.time()
+        #print("AE: Tt = ", round(t3-t1, 4), " Td = ", round(t2-t1, 4))
         return obs
 
         # Introduce a marker on the image that points towards the door that we want to go to. That would allow input and
@@ -470,6 +474,7 @@ class AI2ThorBase(embodied.Env):
         }
 
     def step(self, action, add_extra = False):
+        t1 = time.time()
         # If this env has been retired (in evaluation mode we have evaluated everything already), then
         # don't actually do any stepping, but just return the previous obs
         if self.env_retired:
@@ -486,6 +491,7 @@ class AI2ThorBase(embodied.Env):
         #print("action: ", action)
 
         if action['reset']:
+            tr1 = time.time()
             print('R', end='', sep='')
             # STORE EPISODE STATS:
             # A* path length, A* path, travelled path length, travelled path, habitat id, actions taken.
@@ -514,7 +520,10 @@ class AI2ThorBase(embodied.Env):
                 f.write(json.dumps(episode_stats) + "\n")
 
             obs, extra_obs = self._reset()
+            tr2 = time.time()
+            print("AE Tr = ", round(tr2-tr1,4))
         elif index_to_action(int(action['action'])) == "STOP":
+            t1s = time.time()
             self.chosen_actions.append(int(action['action']))
             self._done = True
 
@@ -529,9 +538,15 @@ class AI2ThorBase(embodied.Env):
 
             print('S', end='', sep='')
             obs, extra_obs = self.current_ai2thor_observation()
+            t2s = time.time()
+            print("AE Ts = ", round(t2s-t1s,4))
         else:
+            t1a = time.time()
             raw_action = index_to_action(int(action['action']))
+            t1r = time.time()
             self.rnc.execute_action(raw_action, moveMagnitude=self.grid_size, grid_size=self.grid_size, adhere_to_grid=True)
+            t2r = time.time()
+            print("AE Trnc = ", round(t2r-t1r,4))
             self.chosen_actions.append(int(action['action']))
             # This is slightly ugly, but we need to calculate distance_left variable right after rnc.execute_action
             # to allow observation to be up to date. In time this should be moved to some function instead of relying
@@ -557,6 +572,8 @@ class AI2ThorBase(embodied.Env):
                 self._done = True
             #else:
             obs, extra_obs = self.current_ai2thor_observation()
+            t2a = time.time()
+            print("AE Ta = ", round(t2a-t1a,4))
 
         # Now we turn the obs that was returned by the environment into obs that we use for training,
         # and to not confuse the two, make sure that 'pov' field is not there, because it should be 'image'.
@@ -568,6 +585,8 @@ class AI2ThorBase(embodied.Env):
         #print("S2")
         self.prev_obs = obs
         self.prev_extra_obs = extra_obs
+        t2 = time.time()
+        print("AE Tt = ", round(t2-t1,4))
         if add_extra:
             return obs, extra_obs
         else:
