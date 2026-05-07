@@ -1,4 +1,4 @@
-import logging, threading, elements, random, embodied, traceback, time
+import logging, threading, elements, random, embodied, traceback #, time
 import numpy as np
 from ai2_thor_model_training.training_data_extraction import RobotNavigationControl
 from ai2_thor_model_training.ae_utils import (NavigationUtils, action_mapping, euclidean_dist,
@@ -476,7 +476,7 @@ class AI2ThorBase(embodied.Env):
         }
 
     def step(self, action, add_extra = False):
-        t1 = time.time()
+        #t1 = time.time()
         # If this env has been retired (in evaluation mode we have evaluated everything already), then
         # don't actually do any stepping, but just return the previous obs
         if self.env_retired:
@@ -528,7 +528,7 @@ class AI2ThorBase(embodied.Env):
             #tr3 = time.time()
             #print("AE Tr = ", round(tr2-tr1,4), " Trr = ", round(tr3-tr2, 4))
         elif index_to_action(int(action['action'])) == "STOP":
-            t1s = time.time()
+            #t1s = time.time()
             self.chosen_actions.append(int(action['action']))
             self._done = True
 
@@ -543,15 +543,15 @@ class AI2ThorBase(embodied.Env):
 
             print('S', end='', sep='')
             obs, extra_obs = self.current_ai2thor_observation()
-            t2s = time.time()
-            print("AE Ts = ", round(t2s-t1s,4))
+            #t2s = time.time()
+            #print("AE Ts = ", round(t2s-t1s,4))
         else:
-            t1a = time.time()
+            #t1a = time.time()
             raw_action = index_to_action(int(action['action']))
-            t1r = time.time()
+            #t1r = time.time()
             self.rnc.execute_action(raw_action, moveMagnitude=self.grid_size, grid_size=self.grid_size, adhere_to_grid=True)
-            t2r = time.time()
-            print("AE Trnc = ", round(t2r-t1r,4))
+            #t2r = time.time()
+            #print("AE Trnc = ", round(t2r-t1r,4))
             self.chosen_actions.append(int(action['action']))
             # This is slightly ugly, but we need to calculate distance_left variable right after rnc.execute_action
             # to allow observation to be up to date. In time this should be moved to some function instead of relying
@@ -577,8 +577,8 @@ class AI2ThorBase(embodied.Env):
                 self._done = True
             #else:
             obs, extra_obs = self.current_ai2thor_observation()
-            t2a = time.time()
-            print("AE Ta = ", round(t2a-t1a,4))
+            #t2a = time.time()
+            #print("AE Ta = ", round(t2a-t1a,4))
 
         # Now we turn the obs that was returned by the environment into obs that we use for training,
         # and to not confuse the two, make sure that 'pov' field is not there, because it should be 'image'.
@@ -590,8 +590,8 @@ class AI2ThorBase(embodied.Env):
         #print("S2")
         self.prev_obs = obs
         self.prev_extra_obs = extra_obs
-        t2 = time.time()
-        print("AE Tt = ", round(t2-t1,4))
+        #t2 = time.time()
+        #print("AE Tt = ", round(t2-t1,4))
         if add_extra:
             return obs, extra_obs
         else:
@@ -907,7 +907,7 @@ class AI2ThorBase(embodied.Env):
         # reachable_positions = tt.thor_reachable_positions(self.controller)
         # self.reachable_positions
         placements = sep_spatial_sample(self.reachable_positions, sep, num_stops, rnd=rnd)
-        t4 = time.time()
+        #t4 = time.time()
 
         # print(placements)
 
@@ -929,33 +929,33 @@ class AI2ThorBase(embodied.Env):
             #print("Placement: ", place_with_rtn, " el_ndx: ", el_ndx)
             self.explored_placements_in_current_habitat.append(place_with_rtn)
             ## Teleport, then start new exploration. Achieve goal. Then repeat.
-            tt1 = time.time()
+            #tt1 = time.time()
             self.rnc.teleport_to(place_with_rtn)
-            tt2 = time.time()
+            #tt2 = time.time()
 
             # We've just been put in a random place in a habitat. We want to move now to where we want to go,
             # e.g., middle of the room, a door, etc.. For that we need to plan a path to there.
             try:
                 point_for_room_search = (p[0], "", p[1])
-                tp1 = time.time()
+                #tp1 = time.time()
                 self.current_target_point = self.choose_target_point(place_with_rtn, point_for_room_search) # self.target_room will be set in this function
-                tp2 = time.time()
-                print("AE: Tctp = ", round(tp2-tp1,4))
+                #tp2 = time.time()
+                #print("AE: Tctp = ", round(tp2-tp1,4))
 
                 cur_pos = self.rnc.get_agent_pos_and_rotation()
-                tp3 = time.time()
+                #tp3 = time.time()
                 #print("Placement: ", place_with_rtn, " cur_pos: ", cur_pos, " el_ndx: ", el_ndx)
                 self.initial_path_length = self.nu.get_path_cost_to_target_point(cur_pos,
                                                                                  self.current_target_point,
                                                                                  self.reachable_positions,
                                                                                  close_enough=self.plan_close_enough,
                                                                                  step=self.grid_size)
-                tp4 = time.time()
+                #tp4 = time.time()
                 # Now let's remember the A* path- we will want it for results.
                 (self.astar_path, _, self.path_start, self.path_dest) = self.nu.get_last_path_and_params()
                 #print("AE: Path: ", self.astar_path)
 
-                tp5 = time.time()
+                #tp5 = time.time()
                 # If we have several permissible destinations, then calculate A* path for all of them
                 if hasattr(self, 'all_door_targets') and self.evaluation_mode:
                     self.all_astar_paths = []
@@ -968,8 +968,8 @@ class AI2ThorBase(embodied.Env):
                                                                              step=self.grid_size)
                         (astar_path, _, _, _) = self.nu.get_last_path_and_params()
                         self.all_astar_paths.append(astar_path)
-                tp6 = time.time()
-                print("AE: Tapc = ", round(tp6 - tp5, 4))
+                #tp6 = time.time()
+                #print("AE: Tapc = ", round(tp6 - tp5, 4))
                 if isinstance(self, DoorFinder):
                     # what is the room we start in
                     self.starting_room = room_this_point_belongs_to(self.rooms_in_habitat, point_for_room_search)
@@ -978,8 +978,8 @@ class AI2ThorBase(embodied.Env):
 
                     # We must ensure that we navigate from one room to another
                     if self.target_room == self.starting_room: raise ValueError("start and end points in same room")
-                tp7 = time.time()
-                print("AE Ttel = ", round(tt2 - tt1,4), " Tpl1 = ", round(tp2-tp1,4), " Tpl2=", round(tp3-tp2,4), " Tpl3=", round(tp4-tp3,4), " Tpl4=", round(tp5-tp4,4), " Tpl5=", round(tp6-tp5,4), " Tpl6=", round(tp7-tp6,4))
+                #tp7 = time.time()
+                #print("AE Ttel = ", round(tt2 - tt1,4), " Tpl1 = ", round(tp2-tp1,4), " Tpl2=", round(tp3-tp2,4), " Tpl3=", round(tp4-tp3,4), " Tpl4=", round(tp5-tp4,4), " Tpl5=", round(tp6-tp5,4), " Tpl6=", round(tp7-tp6,4))
             except ValueError as e:
                 # If the path could not be planned, then drop it and carry on with the next one
                 #print(f"ERROR: {e}")
@@ -1016,9 +1016,9 @@ class AI2ThorBase(embodied.Env):
 
             #print("CH2")
             path_planned = True
-        t5 = time.time()
+        #t5 = time.time()
         #print("AE, Tb1 = ", round(t2 - t1, 4), " Tb2 = ", round(t3-t2,4), " Tb3 = ", round(t4-t3,4), " Tb4 = ", round(t5-t4, 4), " placement_attempts: ", placement_attempts)
-        print("AE, Tb4 = ", round(t5 - t4, 4), " placement_attempts: ", placement_attempts)
+        #print("AE, Tb4 = ", round(t5 - t4, 4), " placement_attempts: ", placement_attempts)
 
     # Get all reachable positions and store them in a variable.
     def update_navigation_artifacts(self, house):
