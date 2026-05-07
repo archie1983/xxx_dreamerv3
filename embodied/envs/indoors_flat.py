@@ -938,6 +938,7 @@ class AI2ThorBase(embodied.Env):
                 tp1 = time.time()
                 self.current_target_point = self.choose_target_point(place_with_rtn, point_for_room_search) # self.target_room will be set in this function
                 tp2 = time.time()
+                print("AE: Tctp = ", round(tp2-tp1,4))
 
                 cur_pos = self.rnc.get_agent_pos_and_rotation()
                 tp3 = time.time()
@@ -966,6 +967,7 @@ class AI2ThorBase(embodied.Env):
                         (astar_path, _, _, _) = self.nu.get_last_path_and_params()
                         self.all_astar_paths.append(astar_path)
                 tp6 = time.time()
+                print("AE: Tapc = ", round(tp6 - tp5, 4))
                 if isinstance(self, DoorFinder):
                     # what is the room we start in
                     self.starting_room = room_this_point_belongs_to(self.rooms_in_habitat, point_for_room_search)
