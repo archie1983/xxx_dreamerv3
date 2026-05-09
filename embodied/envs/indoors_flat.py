@@ -210,7 +210,7 @@ class StepCountPenalizer:
             self.steps_done += 1
 
         if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0 and self.steps_done > np.max(extra_obs['all_target_dists_initial']):
-            reward = -0.1
+            reward = -0.25
         #if self.steps_done > extra_obs['initial_distance']:
         #    reward = -0.1
 
@@ -253,7 +253,7 @@ class TargetAchievedRewardForDoor:
             # Participation prize if any of the distances have become smaller
             # Participation prize equals to the best reduction of the distances
             if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists']) == len(extra_obs['all_target_dists_initial']) and len(extra_obs['all_target_dists']) > 0:
-                reward += 10 * max([d1 - d2 for d1, d2 in zip(extra_obs['all_target_dists_initial'], extra_obs['all_target_dists'])])
+                reward += 2 * max([d1 - d2 for d1, d2 in zip(extra_obs['all_target_dists_initial'], extra_obs['all_target_dists'])])
 
             # If none of the above rewards have been earned, then check if it needs a penalty for
             # early STOP (not walking enough to get even through the nearest door)
