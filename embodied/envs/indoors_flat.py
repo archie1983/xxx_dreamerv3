@@ -86,6 +86,7 @@ class Door(embodied.Wrapper):
         #    actions.pop("STOP")  # remove STOP action because that will be treated differently
 
         self.rewards = [
+            DistanceReductionReward(scale=1.0),
             StepCountPenalizer(scale=1.0),
             TargetAchievedRewardForDoor(epsilon=reward_close_enough)
         ]
