@@ -210,7 +210,7 @@ class StepCountPenalizer:
         else:
             self.steps_done += 1
 
-        if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0 and self.steps_done > 2 * np.max(extra_obs['all_target_dists_initial']):
+        if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0 and self.steps_done > 4 * np.max(extra_obs['all_target_dists_initial']):
             reward = -0.25
         #if self.steps_done > extra_obs['initial_distance']:
         #    reward = -0.1
@@ -247,6 +247,11 @@ class TargetAchievedRewardForDoor:
                 if dist <= self.epsilon:
                     reward += 100
                     break
+
+            # any crossing into the new room is great
+            if (extra_obs['stepsafterroomchange'] > 0):
+                reward += 100
+
             # high reward for correct amount of steps in the new room
             if (extra_obs['stepsafterroomchange'] <= self.max_steps_in_new_room and extra_obs['stepsafterroomchange'] >= self.min_steps_in_new_room):
                 reward += 100
@@ -265,8 +270,8 @@ class TargetAchievedRewardForDoor:
                 else:
                     min_distance_walk = extra_obs['initial_distance']
                     mean_distance_walk = min_distance_walk
-                if self.steps_done < mean_distance_walk:
-                    reward = -1 * (min_distance_walk - self.steps_done)
+                if self.steps_done < 4 * mean_distance_walk:
+                    reward += min(-1 * (4 * min_distance_walk - self.steps_done) , 0)
 
                 reward = max(reward, -100)
 
@@ -612,7 +617,7 @@ class AI2ThorBase(embodied.Env):
         if self.starting_room is not None and self.current_room != self.starting_room:
             self.steps_in_new_room += 1
             if self.steps_in_new_room > 15:
-                self.steps_in_new_room = 0
+                #self.steps_in_new_room = 0
                 self.starting_room = self.current_room
 
         all_visible_doors = self.nu.get_all_visible_doors(self.controller)
@@ -974,6 +979,7 @@ class AI2ThorBase(embodied.Env):
                 if isinstance(self, DoorFinder):
                     # what is the room we start in
                     self.starting_room = room_this_point_belongs_to(self.rooms_in_habitat, point_for_room_search)
+                    self.steps_in_new_room = 0
 
                     if (self.starting_room == None): raise ValueError("Starting room not identifiable")
 
