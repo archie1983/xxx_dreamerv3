@@ -210,10 +210,12 @@ class StepCountPenalizer:
         else:
             self.steps_done += 1
 
-        if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0 and self.steps_done > 4 * np.max(extra_obs['all_target_dists_initial']):
-            reward = -0.25
+        #if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0 and self.steps_done > 10 * np.max(extra_obs['all_target_dists_initial']):
+        #    reward = -0.25
         #if self.steps_done > extra_obs['initial_distance']:
         #    reward = -0.1
+        if self.steps_done > 2 * extra_obs['best_path_length']:
+            reward = -0.25
 
         return np.float32(reward * self.scale)
 
@@ -264,14 +266,17 @@ class TargetAchievedRewardForDoor:
             # If none of the above rewards have been earned, then check if it needs a penalty for
             # early STOP (not walking enough to get even through the nearest door)
             if reward <= 0:
-                if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0:
-                    min_distance_walk = np.min(extra_obs['all_target_dists_initial'])
-                    mean_distance_walk = np.mean(extra_obs['all_target_dists_initial'])
-                else:
-                    min_distance_walk = extra_obs['initial_distance']
-                    mean_distance_walk = min_distance_walk
-                if self.steps_done < 4 * mean_distance_walk:
-                    reward += min(-1 * (4 * min_distance_walk - self.steps_done) , 0)
+                # if extra_obs['all_target_dists_initial'] is not None and len(extra_obs['all_target_dists_initial']) > 0:
+                #     min_distance_walk = np.min(extra_obs['all_target_dists_initial'])
+                #     mean_distance_walk = np.mean(extra_obs['all_target_dists_initial'])
+                # else:
+                #     min_distance_walk = extra_obs['initial_distance']
+                #     mean_distance_walk = min_distance_walk
+                # if self.steps_done < 4 * mean_distance_walk:
+                #     reward += min(-1 * (4 * min_distance_walk - self.steps_done) , 0)
+
+                if self.steps_done < extra_obs['best_path_length']:
+                    reward += -1 * (extra_obs['best_path_length'] - self.steps_done)
 
                 reward = max(reward, -100)
 
@@ -638,7 +643,8 @@ class AI2ThorBase(embodied.Env):
             roomtype=np.float32(self.room_type),
             initial_distance=np.float32(self.initial_distance),
             all_target_dists=self.all_target_dists,
-            all_target_dists_initial=self.all_target_dists_initial
+            all_target_dists_initial=self.all_target_dists_initial,
+            best_path_length = self.best_path_length
         )
 
         if self._done:
