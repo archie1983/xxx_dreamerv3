@@ -705,6 +705,7 @@ class AI2ThorBase(embodied.Env):
             'initial_distance': extra_obs['initial_distance'],
             'all_target_dists': extra_obs['all_target_dists'],
             'all_target_dists_initial': extra_obs['all_target_dists_initial'],
+            'best_path_length': extra_obs['best_path_length']
         }
 
         #print("obs: ", obs)
