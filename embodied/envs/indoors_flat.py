@@ -30,8 +30,8 @@ class Roomcentre(embodied.Wrapper):
 
         # Actions
         actions = actions.copy()
-        #if "STOP" in actions:
-        #    actions.pop("STOP")  # remove STOP action because that will be treated differently
+        if "STOP" in actions:
+            actions.pop("STOP")  # remove STOP action because that will be treated differently
 
         self.rewards = [
             DistanceReductionReward(),
@@ -82,8 +82,8 @@ class Door(embodied.Wrapper):
 
         # Actions
         actions = actions.copy()
-        #if "STOP" in actions:
-        #    actions.pop("STOP")  # remove STOP action because that will be treated differently
+        if "STOP" in actions:
+            actions.pop("STOP")  # remove STOP action because that will be treated differently
 
         self.rewards = [
             DistanceReductionReward(scale=1.0),
@@ -239,7 +239,7 @@ class TargetAchievedRewardForDoor:
         if obs['is_first']:
             self.reward_issued = False
             self.steps_done = 0
-        elif not self.reward_issued and index_to_action(int(action['action'])) == "STOP":
+        elif not self.reward_issued and obs['is_last']: #and index_to_action(int(action['action'])) == "STOP":
             '''
             We only want to issue this reward once the STOP action has been issued by the model. And at that point we will calculate
             how much we award based on what has been achieved.
@@ -303,7 +303,7 @@ class TargetAchievedRewardRoomCentre:
         reward = 0
         if obs['is_first']:
             self.reward_issued = False
-        elif not self.reward_issued and index_to_action(int(action['action'])) == "STOP":
+        elif not self.reward_issued and obs['is_last']: #and index_to_action(int(action['action'])) == "STOP":
             '''
             We only want to issue this reward once the STOP action has been issued by the model. And at that point we will calculate
             how much we award based on distance left
@@ -457,6 +457,7 @@ class AI2ThorBase(embodied.Env):
 
         self._step = 0
         self._obs_space = self.obs_space
+        self._done = False
 
         self._action_names = tuple(actions.keys())
         self._action_values = tuple(actions.values())
@@ -538,24 +539,6 @@ class AI2ThorBase(embodied.Env):
             obs, extra_obs = self._reset()
             #tr3 = time.time()
             #print("AE Tr = ", round(tr2-tr1,4), " Trr = ", round(tr3-tr2, 4))
-        elif index_to_action(int(action['action'])) == "STOP":
-            #t1s = time.time()
-            self.chosen_actions.append(int(action['action']))
-            self._done = True
-
-            try:
-                self.distance_left, self.room_type, self.cur_pos_xy = self.get_current_path_and_pose_state()
-                self.travelled_path.append(self.cur_pos_xy)
-                self.all_target_dists = self.euclidean_dist_to_all_targets()
-            except ValueError as e:
-                self.distance_left = np.float32(0.0)
-                self._bad_spot = True
-                print('O', end='', sep='')
-
-            print('S', end='', sep='')
-            obs, extra_obs = self.current_ai2thor_observation()
-            #t2s = time.time()
-            #print("AE Ts = ", round(t2s-t1s,4))
         else:
             #t1a = time.time()
             raw_action = index_to_action(int(action['action']))
@@ -576,6 +559,7 @@ class AI2ThorBase(embodied.Env):
             except ValueError as e:
                 self.distance_left = np.float32(0.0)
                 self._bad_spot = True
+                print('O', end='', sep='')
 
             if self._bad_spot:
                 #print("FORCED SCENE CHANGE!!!", self.step_count_in_current_episode)
@@ -587,7 +571,12 @@ class AI2ThorBase(embodied.Env):
                 #obs = self._reset()
                 self._done = True
             #else:
+            # NOTE: self._done can change inside self.current_ai2thor_observation()
             obs, extra_obs = self.current_ai2thor_observation()
+
+            if self._done: # stop condition
+                print('S', end='', sep='')
+
             #t2a = time.time()
             #print("AE Ta = ", round(t2a-t1a,4))
 
@@ -624,6 +613,12 @@ class AI2ThorBase(embodied.Env):
             if self.steps_in_new_room > 15:
                 #self.steps_in_new_room = 0
                 self.starting_room = self.current_room
+
+        # if we're not done yet, then maybe we have arrived, and we might actually be done.
+        # If we're already done (a.k.a. bad spot), then leave it as is.
+        if not self._done:
+            self._done = self.have_we_arrived()
+            self.all_target_dists = self.euclidean_dist_to_all_targets()
 
         all_visible_doors = self.nu.get_all_visible_doors(self.controller)
 
@@ -1239,16 +1234,4 @@ class DoorFinder(AI2ThorBase):
 
     # Determines if we have little enough left to call it an achieved goal
     def have_we_arrived(self, epsilon = 0.0, eval = False):
-        # If we're free to choose any door as destination (i.e., we are evaluating),
-        # then mark it as arrived if we're within distance of any door
-        #if eval:
-        if True:
-            if self.all_door_targets != None:
-                for dt in self.all_door_targets:
-                    p1 = (dt['pos']['x'], dt['pos']['z'])
-                    p2 = (self.cur_pos_xy[0], self.cur_pos_xy[2])
-                    if euclidean_dist(p1, p2) <= epsilon:
-                        return True
-            return False
-        else: # otherwise we have a calculated path length to the specific door that we want and we need to compare that to allowed error
-            return (self.current_path_length <= epsilon or self.steps_in_new_room >= 3)
+        return self.steps_in_new_room >= 5
