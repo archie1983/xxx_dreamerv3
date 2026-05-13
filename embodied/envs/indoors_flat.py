@@ -674,6 +674,7 @@ class AI2ThorBase(embodied.Env):
         self.room_type = -1
         self.starting_room = None
         self.all_target_dists_initial = None
+        self.all_door_targets = None
 
         obs, extra_obs = self.current_ai2thor_observation()
         #t3r = time.time()
