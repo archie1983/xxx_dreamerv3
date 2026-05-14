@@ -280,6 +280,11 @@ class TargetAchievedRewardForDoor:
 
                 reward = max(reward, -100)
 
+            # If the reason for ending the episode was a bad spot, then penalize that to make sure it doesn't take that as
+            # and improvement (shorter path length than max allowed and less negative score than with full length episode)
+            if extra_obs['bad_spot']:
+                reward = -300
+
             self.reward_issued = True
             #print("final reward: ", reward, " = ", extra_obs['initial_distance'], " - ", extra_obs['distanceleft'])
         else:
@@ -639,7 +644,8 @@ class AI2ThorBase(embodied.Env):
             initial_distance=np.float32(self.initial_distance),
             all_target_dists=self.all_target_dists,
             all_target_dists_initial=self.all_target_dists_initial,
-            best_path_length = self.best_path_length
+            best_path_length = self.best_path_length,
+            bad_spot = self._bad_spot
         )
 
         if self._done:
@@ -701,7 +707,8 @@ class AI2ThorBase(embodied.Env):
             'initial_distance': extra_obs['initial_distance'],
             'all_target_dists': extra_obs['all_target_dists'],
             'all_target_dists_initial': extra_obs['all_target_dists_initial'],
-            'best_path_length': extra_obs['best_path_length']
+            'best_path_length': extra_obs['best_path_length'],
+            'bad_spot': extra_obs['bad_spot']
         }
 
         #print("obs: ", obs)
