@@ -394,7 +394,7 @@ class AI2ThorBase(embodied.Env):
         self._total_reward_for_this_run = 0
         self.step_count_in_current_episode = 0
         self.step_count_since_start = 0
-        self.distance_left = np.float32(0.0)
+        self.distance_left = np.float32(1000.0)
         self.cur_pos_xy = None
         self.all_target_dists_initial = None
         self.room_type = -1 # current room type
@@ -562,7 +562,7 @@ class AI2ThorBase(embodied.Env):
                     self.all_target_dists_initial = self.euclidean_dist_to_all_targets()
                 #self._done = self.have_we_arrived(self.reward_close_enough)
             except ValueError as e:
-                self.distance_left = np.float32(0.0)
+                self.distance_left = np.float32(1000.0)
                 self._bad_spot = True
                 print('O', end='', sep='')
 
@@ -674,7 +674,7 @@ class AI2ThorBase(embodied.Env):
         self._done = False
         self._bad_spot = False
 
-        self.distance_left = 0
+        self.distance_left = 1000
         self.all_target_dists = []
         self.steps_in_new_room = 0
         self.room_type = -1
